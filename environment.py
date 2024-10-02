@@ -37,7 +37,7 @@ class Environment(object):
         """
 
 class QuiverMutationEnvironment(Environment):
-    def __init__(self, quiver, max_edges = None, random_max_steps = 4):
+    def __init__(self, quiver, max_edges = None, random_max_steps = 0):
         """
         @param quiver: adjacency matrix of quiver
         """
