@@ -49,29 +49,45 @@ class QuiverMutationEnvironment(Environment):
 
     @staticmethod
     def _mutate_mat(adjacency_mat, node):
-        adjacency_mat = adjacency_mat.copy()
-        for i in range(adjacency_mat.shape[0]):
-            if i == node: continue
-            if adjacency_mat[i][node] != 0:
-                for j in range(adjacency_mat.shape[0]):
-                    if j == node: continue
-                    if adjacency_mat[node][j] != 0:
-                        if adjacency_mat[j][i] == 0:
-                            adjacency_mat[i][j] = 1
-                        else:
-                            adjacency_mat[j][i] = 0
-        temp = adjacency_mat[node,...].copy()
-        adjacency_mat[node,...] = adjacency_mat[...,node]
-        adjacency_mat[...,node] = temp
-        return adjacency_mat
+        # adjacency_mat = adjacency_mat.copy()
+        # for i in range(adjacency_mat.shape[0]):
+        #     if i == node: continue
+        #     if adjacency_mat[i][node] != 0:
+        #         for j in range(adjacency_mat.shape[0]):
+        #             if j == node or i == j: continue
+        #             if adjacency_mat[node][j] != 0:
+        #                 if adjacency_mat[j][i] == 0:
+        #                     # print(f"Add i={i+1} j={j+1} node={node+1}")
+        #                     adjacency_mat[i][j] += 1
+        #                 else:
+        #                     # print(f"Remove i={i+1} j={j+1} node={node+1}")
+        #                     adjacency_mat[j][i] = max(adjacency_mat[j][i]-1, 0)
+        #                 # print("ITER")
+
+        # temp = adjacency_mat[node,...].copy()
+        # adjacency_mat[node,...] = adjacency_mat[...,node]
+        # adjacency_mat[...,node] = temp
+        # return adjacency_mat
+        mask = np.zeros_like(adjacency_mat)
+        mask[node, ...] += 1
+        mask[..., node] += 1
+        mask = mask > 0
+
+        mat= mask*(-adjacency_mat) + (~mask)*(adjacency_mat + \
+            (np.abs(adjacency_mat[..., node][..., np.newaxis])*adjacency_mat[node, ...][np.newaxis, ...] + \
+            adjacency_mat[..., node][..., np.newaxis]*np.abs(adjacency_mat[node, ...][np.newaxis, ...]))//2)
+        return mat
+    
 
     def fitness(self, state):
-        state = state.reshape(self._num_nodes, self._num_nodes)
+        state_ = state.reshape(self._num_nodes, self._num_nodes).copy()
         # There's a faster way...
-        rows, cols = np.where(state == 1)
-        edges = zip(rows.tolist(), cols.tolist())
-        gr = nx.DiGraph()
-        gr.add_edges_from(edges)
+        # rows, cols = np.where(state > 0)
+        # edges = zip(rows.tolist(), cols.tolist())
+        state_[state_ <= 0] = 0
+        gr = nx.from_numpy_array(state_, create_using=nx.MultiDiGraph())
+        # gr = nx.DiGraph()
+        # gr.add_edges_from(edges)
         return -len([*nx.simple_cycles(gr)])
 
     def act(self, state, action: int) -> Tuple[List, float]:
