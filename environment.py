@@ -37,15 +37,21 @@ class Environment(object):
         """
 
 class QuiverMutationEnvironment(Environment):
-    def __init__(self, quiver):
+    def __init__(self, quiver, max_edges = None, random_max_steps = 4):
         """
         @param quiver: adjacency matrix of quiver
         """
         self._quiver = quiver
         self._num_nodes = quiver.shape[0]
+        self._max_edges = max_edges
+        self._random_max_steps = random_max_steps
 
     def random_state(self):
-        return self._quiver.reshape(-1)
+        actions = np.random.choice(self.num_actions, size=(self._random_max_steps,))
+        mutated = self._quiver.reshape(-1).copy()
+        for a in actions:
+            mutated, _ = self.act(mutated, a)
+        return mutated.reshape(-1)
 
     @staticmethod
     def _mutate_mat(adjacency_mat, node):
@@ -93,6 +99,10 @@ class QuiverMutationEnvironment(Environment):
     def act(self, state, action: int) -> Tuple[List, float]:
         state = state.reshape(self._num_nodes, self._num_nodes)
         next_state = self._mutate_mat(state, action).reshape(-1)
+
+        if self._max_edges is not None:
+            if np.abs(next_state).sum() > 2*self._max_edges:
+                next_state = state.reshape(-1)
         fitness = self.fitness(next_state)
         return next_state, (fitness, fitness == 0)
 

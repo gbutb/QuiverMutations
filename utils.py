@@ -64,10 +64,44 @@ def train_agent(env: Environment, agent, num_epochs = 1024, max_steps = 32, batc
 
 def walk_agent(state, env: Environment, agent, max_steps = 32):
     path = [state]
+    actions = []
     for _ in range(max_steps):
         action = agent.act(state)
         state, (_, done) = env.act(state, action)
         path.append(state)
+        actions.append(action)
         if done:
             break
-    return path
+    return path, actions
+
+
+import networkx as nx
+import itertools as it
+def draw_labeled_multigraph(G, attr_name, ax=None):
+    """
+    Source: https://networkx.org/documentation/stable/auto_examples/drawing/plot_multigraphs.html
+    """
+    # Works with arc3 and angle3 connectionstyles
+    connectionstyle = [f"arc3,rad={r}" for r in it.accumulate([0.15] * 4)]
+    # connectionstyle = [f"angle3,angleA={r}" for r in it.accumulate([30] * 4)]
+
+    pos = nx.shell_layout(G)
+    nx.draw_networkx_nodes(G, pos, ax=ax)
+    nx.draw_networkx_labels(G, pos, font_size=20, ax=ax)
+    nx.draw_networkx_edges(
+        G, pos, edge_color="black", alpha=0.5, connectionstyle=connectionstyle, ax=ax
+    )
+
+    labels = {
+        tuple(edge): f"{attrs[attr_name]}"
+        for *edge, attrs in G.edges(keys=True, data=True)
+    }
+    nx.draw_networkx_edge_labels(
+        G,
+        pos,
+        labels,
+        connectionstyle=connectionstyle,
+        label_pos=0.3,
+        font_color="blue",
+        bbox={"alpha": 0},
+        ax=ax)
