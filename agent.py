@@ -14,7 +14,7 @@ from environment import Environment
 from utils import train_agent, walk_agent
 
 def feats(state):
-    return np.clip(state, -200, 200)
+    return np.clip(state, -200, 200)/np.max(state)
 # def feats(state):
 #     n = int(np.round(np.sqrt(state.size)))
 #     return np.gcd.reduce(state.reshape(n,n), axis=0)
@@ -35,9 +35,13 @@ class Agent(object):
 
         self._model = model
         self._target_model = tfk.models.clone_model(model) if target_model is None else target_model
+        self._prev_action = None
 
         self._num_actions = model.output_shape[-1]
         self.update_target_model()
+
+    def clear(self):
+        self._prev_action = None
 
     def store(self, state: np.ndarray, action: int, reward: float, next_state: np.ndarray, terminated: bool):
         """
@@ -58,16 +62,20 @@ class Agent(object):
         """
         self._target_model.set_weights(self._model.get_weights())
 
-    def act(self, state: np.ndarray) -> int:
+    def act(self, state: np.ndarray, training=True) -> int:
         """
         @return integer corresponding to an action.
         """
-        if np.random.rand() <= self._epsilon:
-            return random.randrange(self._num_actions)
+        if (np.random.rand() <= self._epsilon) and training:
+            return random.randrange(self._num_actions), False
 
         state = np.expand_dims(feats(state.flatten()), axis=0)
         Q_a = self._model(state)
-        return np.argmax(Q_a)
+        selected_action = np.argmax(Q_a)
+
+        is_same = self._prev_action == selected_action
+        self._prev_action = selected_action
+        return selected_action, is_same
 
     def fit(self, env: Environment, num_epochs = 1024, max_steps = 32, batch_size = 128, min_memory_size = 1024, verbosity = 0):
         return train_agent(

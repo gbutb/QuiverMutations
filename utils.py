@@ -27,8 +27,10 @@ def train_agent(env: Environment, agent, num_epochs = 1024, max_steps = 32, batc
 
         for _ in range(max_steps):
             steps_to_update_target_model += 1
-            action = agent.act(state)
+            action, is_same = agent.act(state)
             new_state, (fitness, done) = env.act(state, action)
+            if is_same:
+                fitness = -10
 
             reward = 0
             if done:
@@ -55,6 +57,7 @@ def train_agent(env: Environment, agent, num_epochs = 1024, max_steps = 32, batc
 
             if terminated:
                 break
+        agent.clear()
         if verbosity > 0:
             epochs.set_description(f"Epoch {epoch}, loss = {total_loss / (count+1e-10):e}")
         if agent.current_memory_size > min_memory_size:
@@ -66,7 +69,7 @@ def walk_agent(state, env: Environment, agent, max_steps = 32):
     path = [state]
     actions = []
     for _ in range(max_steps):
-        action = agent.act(state)
+        action, _ = agent.act(state, training=False)
         state, (_, done) = env.act(state, action)
         path.append(state)
         actions.append(action)
