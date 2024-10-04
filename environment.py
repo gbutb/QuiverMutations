@@ -84,8 +84,8 @@ class QuiverMutationEnvironment(Environment):
 
         mat= mask*(-adjacency_mat) + (~mask)*(adjacency_mat + \
             (np.abs(adjacency_mat[..., node][..., np.newaxis])*adjacency_mat[node, ...][np.newaxis, ...] + \
-            adjacency_mat[..., node][..., np.newaxis]*np.abs(adjacency_mat[node, ...][np.newaxis, ...]))//2)
-        return mat
+            adjacency_mat[..., node][..., np.newaxis]*np.abs(adjacency_mat[node, ...][np.newaxis, ...]))/2)
+        return np.round(mat)
     
 
     def fitness(self, state):

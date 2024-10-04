@@ -70,7 +70,7 @@ class Agent(object):
             return random.randrange(self._num_actions), False
 
         state = np.expand_dims(feats(state.flatten()), axis=0)
-        Q_a = self._model(state)
+        Q_a = self._model(state, training=training)
         selected_action = np.argmax(Q_a)
 
         is_same = self._prev_action == selected_action
