@@ -13,6 +13,11 @@ from tensorflow import keras as tfk
 from environment import Environment
 from utils import train_agent, walk_agent
 
+def feats(state):
+    return np.clip(state, -200, 200)
+# def feats(state):
+#     n = int(np.round(np.sqrt(state.size)))
+#     return np.gcd.reduce(state.reshape(n,n), axis=0)
 
 class Agent(object):
     def __init__(self, model: tfk.Sequential, target_model: tfk.Sequential = None, buffer_size: int = 2**11):
@@ -60,7 +65,7 @@ class Agent(object):
         if np.random.rand() <= self._epsilon:
             return random.randrange(self._num_actions)
 
-        state = np.expand_dims(state.flatten(), axis=0)
+        state = np.expand_dims(feats(state.flatten()), axis=0)
         Q_a = self._model(state)
         return np.argmax(Q_a)
 
@@ -92,8 +97,8 @@ class Agent(object):
         states_batch = []
         next_states_batch = []
         for state, _, _, next_state, _ in minibatch:
-            states_batch.append(state)
-            next_states_batch.append(next_state)
+            states_batch.append(feats(state))
+            next_states_batch.append(feats(next_state))
         states_batch = np.asarray(states_batch)
         next_states_batch = np.asarray(next_states_batch)
 
@@ -109,10 +114,10 @@ class Agent(object):
 
             Q_s[idx][action] = (1.0 - self._policy_lr)*Q_s[idx][action] + self._policy_lr * maxQ_next
 
-            X.append(state)
+            X.append(feats(state))
             Y.append(Q_s[idx])
 
-
+        # print(np.max(X))
         history = self._model.fit(np.asarray(X), np.asarray(Y), batch_size = batch_size, shuffle = True, verbose = 0)
         if self._epsilon > self._epsilon_min:
             self._epsilon *= self._epsilon_decay

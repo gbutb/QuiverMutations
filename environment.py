@@ -21,12 +21,12 @@ class Environment(object):
         """
 
     @abc.abstractmethod
-    def act(self, state, action: int) -> Tuple[List, float]:
+    def act(self, state, action: int) -> Tuple[List, Tuple[float, bool]]:
         """
         @param state: Current state.
         @param action: Index of the action using which to act on the state.
 
-        @return Tuple (next state, fitness of the next state).
+        @return Tuple (next state, (fitness of the next state, bool terminal)).
         """
 
     @property
@@ -37,18 +37,21 @@ class Environment(object):
         """
 
 class QuiverMutationEnvironment(Environment):
-    def __init__(self, quiver, max_edges = None, random_max_steps = 0):
+    def __init__(self, quivers, max_edges = None, random_max_steps = 0):
         """
         @param quiver: adjacency matrix of quiver
         """
-        self._quiver = quiver
-        self._num_nodes = quiver.shape[0]
+        self._quiver = quivers
+        self._num_nodes = quivers[0].shape[0] if isinstance(quivers, list) else quivers.shape[0]
         self._max_edges = max_edges
         self._random_max_steps = random_max_steps
 
     def random_state(self):
         actions = np.random.choice(self.num_actions, size=(self._random_max_steps,))
-        mutated = self._quiver.reshape(-1).copy()
+        if isinstance(self._quiver, list):
+            mutated = self._quiver[int(np.random.choice(len(self._quiver), size=(1,)))].reshape(-1).copy()
+        else:
+            mutated = self._quiver.reshape(-1).copy()
         for a in actions:
             mutated, _ = self.act(mutated, a)
         return mutated.reshape(-1)
@@ -87,23 +90,21 @@ class QuiverMutationEnvironment(Environment):
 
     def fitness(self, state):
         state_ = state.reshape(self._num_nodes, self._num_nodes).copy()
-        # There's a faster way...
-        # rows, cols = np.where(state > 0)
-        # edges = zip(rows.tolist(), cols.tolist())
+
         state_[state_ <= 0] = 0
         gr = nx.from_numpy_array(state_, create_using=nx.MultiDiGraph())
-        # gr = nx.DiGraph()
-        # gr.add_edges_from(edges)
+    
         return -len([*nx.simple_cycles(gr)])
 
-    def act(self, state, action: int) -> Tuple[List, float]:
+    def act(self, state, action: int) -> Tuple[List, Tuple[float, bool]]:
         state = state.reshape(self._num_nodes, self._num_nodes)
         next_state = self._mutate_mat(state, action).reshape(-1)
+        fitness = self.fitness(next_state)
 
         if self._max_edges is not None:
             if np.abs(next_state).sum() > 2*self._max_edges:
                 next_state = state.reshape(-1)
-        fitness = self.fitness(next_state)
+                fitness = -10
         return next_state, (fitness, fitness == 0)
 
     @property
